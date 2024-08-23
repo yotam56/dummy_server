@@ -1,0 +1,8 @@
+Pillow==10.1.0
+torch==2.0.0+cu117
+torchvision==0.16.2
+transformers==4.40.0
+sentencepiece==0.1.99
+onnx==1.16.2
+ollama==0.3.1
+flash_attn==1.0.5
