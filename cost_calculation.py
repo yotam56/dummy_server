@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+import math
 
 MONTH_IN_YEAR = 12
 DAYS_IN_MONTH = 30
@@ -166,6 +167,36 @@ class AWSCost(CostComponent):
 
     def get_worst_monthly_price(self):
         return self.worst_storage_cost + self.worst_data_transfer_cost
+
+
+class GPUPerHourCost(CostComponent):
+    def __init__(
+        self,
+        number_of_clients,
+        number_of_cameras_per_client,
+        _model_name,
+        _avg_working_hours=HOURS_IN_DAY,
+    ):
+        super().__init__(number_of_clients, number_of_cameras_per_client)
+        self.model_name = _model_name
+        self.target_gpu_cost_per_hour = 0.37
+        self.number_of_parallel_workers = 10
+        self.avg_working_hours = _avg_working_hours
+
+    def get_avg_daily_price(self):
+        number_of_instances = math.ceil(self.total_number_of_cameras / self.number_of_parallel_workers)
+        return number_of_instances * self.target_gpu_cost_per_hour * self.avg_working_hours
+
+    def get_avg_monthly_price(self):
+        return self.get_avg_daily_price() * DAYS_IN_MONTH
+
+    def get_worst_daily_price(self):
+        number_of_instances = math.ceil(self.total_number_of_cameras / self.number_of_parallel_workers)
+        return number_of_instances * self.target_gpu_cost_per_hour * HOURS_IN_DAY
+
+    def get_worst_monthly_price(self):
+        return self.get_worst_daily_price() * DAYS_IN_MONTH
+
 
 
 class GeminiCost(CostComponent):
@@ -367,20 +398,26 @@ class StartupCostCalculator:
         #     _avg_working_hours=12,
         #     _image_size=(512, 512),
         # )
-        self.llm = ClaudeCost(
-            number_of_clients=self.number_of_clients,
-            number_of_cameras_per_client=self.number_of_cameras_per_client,
-            _model_name="claude-3-5-sonnet-20240620",
-            _cost_per_million_tokens=3,
-            _avg_working_hours=12,
-            _image_size=(512, 512),
-        )
+        # self.llm = ClaudeCost(
+        #     number_of_clients=self.number_of_clients,
+        #     number_of_cameras_per_client=self.number_of_cameras_per_client,
+        #     _model_name="claude-3-5-sonnet-20240620",
+        #     _cost_per_million_tokens=3,
+        #     _avg_working_hours=12,
+        #     _image_size=(512, 512),
+        # )
         # self.llm = GeminiCost(
         #     number_of_clients=self.number_of_clients,
         #     number_of_cameras_per_client=self.number_of_cameras_per_client,
         #     _model_name="Gemini_1.5_Flash",
         #     _avg_working_hours=12,
         # )
+        self.llm = GPUPerHourCost(
+            number_of_clients=self.number_of_clients,
+            number_of_cameras_per_client=self.number_of_cameras_per_client,
+            _model_name="openbmb/MiniCPM-V-2_6-int4",
+            _avg_working_hours=12,
+        )
 
     def generate_cost_report(self):
         report = "Startup Cost Estimate Report\n"
