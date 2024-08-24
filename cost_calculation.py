@@ -279,6 +279,65 @@ class GPTCost(CostComponent):
         return self.get_worst_daily_price() * DAYS_IN_MONTH
 
 
+class ClaudeCost(CostComponent):
+    def __init__(
+        self,
+        number_of_clients,
+        number_of_cameras_per_client,
+        _model_name,
+        _cost_per_million_tokens,
+        _avg_working_hours=HOURS_IN_DAY,
+        _image_size=(512, 512),
+    ):
+        super().__init__(number_of_clients, number_of_cameras_per_client)
+        self.image_size = _image_size
+        self.model_name = _model_name
+        self.cost_per_million_tokens = _cost_per_million_tokens
+        self.tokens_per_image = self.get_tokens_per_image()
+        self.avg_working_hours = _avg_working_hours
+
+    def get_tokens_per_image(self):
+        # https://docs.anthropic.com/en/docs/build-with-claude/vision
+        if self.model_name == "claude-3-5-sonnet-20240620":
+            return self.image_size[0] * self.image_size[1] / 750
+        else:
+            raise NotImplemented("get_tokens_per_image")
+
+    def get_cost_per_token(self):
+        return self.cost_per_million_tokens / 1_000_000
+
+    def calculate_daily_cost_per_camera(self, working_hours, image_per_hour):
+        tokens_per_hour = image_per_hour * self.tokens_per_image
+        tokens_per_day = tokens_per_hour * working_hours
+        cost_per_token = self.get_cost_per_token()
+        daily_cost = tokens_per_day * cost_per_token
+        return daily_cost
+
+    def get_avg_daily_price(self):
+        image_per_hour = SECONDS_IN_MINUTE * MINUTES_IN_HOUR
+        return (
+            self.calculate_daily_cost_per_camera(
+                working_hours=self.avg_working_hours, image_per_hour=image_per_hour
+            )
+            * self.total_number_of_cameras
+        )
+
+    def get_avg_monthly_price(self):
+        return self.get_avg_daily_price() * DAYS_IN_MONTH
+
+    def get_worst_daily_price(self):
+        image_per_hour = SECONDS_IN_MINUTE * MINUTES_IN_HOUR
+        return (
+            self.calculate_daily_cost_per_camera(
+                working_hours=HOURS_IN_DAY, image_per_hour=image_per_hour
+            )
+            * self.total_number_of_cameras
+        )
+
+    def get_worst_monthly_price(self):
+        return self.get_worst_daily_price() * DAYS_IN_MONTH
+
+
 class StartupCostCalculator:
     def __init__(self, _number_of_clients, _number_of_cameras_per_client):
         self.number_of_clients = _number_of_clients
@@ -308,12 +367,20 @@ class StartupCostCalculator:
         #     _avg_working_hours=12,
         #     _image_size=(512, 512),
         # )
-        self.llm = GeminiCost(
+        self.llm = ClaudeCost(
             number_of_clients=self.number_of_clients,
             number_of_cameras_per_client=self.number_of_cameras_per_client,
-            _model_name="Gemini_1.5_Flash",
+            _model_name="claude-3-5-sonnet-20240620",
+            _cost_per_million_tokens=3,
             _avg_working_hours=12,
+            _image_size=(512, 512),
         )
+        # self.llm = GeminiCost(
+        #     number_of_clients=self.number_of_clients,
+        #     number_of_cameras_per_client=self.number_of_cameras_per_client,
+        #     _model_name="Gemini_1.5_Flash",
+        #     _avg_working_hours=12,
+        # )
 
     def generate_cost_report(self):
         report = "Startup Cost Estimate Report\n"
