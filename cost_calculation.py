@@ -179,7 +179,7 @@ class GPUPerHourCost(CostComponent):
     ):
         super().__init__(number_of_clients, number_of_cameras_per_client)
         self.model_name = _model_name
-        self.target_gpu_cost_per_hour = 0.37
+        self.target_gpu_cost_per_hour = 0.2452
         self.number_of_parallel_workers = 10
         self.avg_working_hours = _avg_working_hours
 
@@ -271,7 +271,7 @@ class GPTCost(CostComponent):
             512,
             512,
         ):
-            return 8500
+            return 85
         else:
             raise NotImplemented("get_tokens_per_image")
 
@@ -394,7 +394,7 @@ class StartupCostCalculator:
         #     number_of_clients=self.number_of_clients,
         #     number_of_cameras_per_client=self.number_of_cameras_per_client,
         #     _model_name="gpt-4o-mini-2024-07-18",
-        #     _cost_per_million_tokens=0.15,
+        #     _cost_per_million_tokens=2.5,
         #     _avg_working_hours=12,
         #     _image_size=(512, 512),
         # )
@@ -406,18 +406,18 @@ class StartupCostCalculator:
         #     _avg_working_hours=12,
         #     _image_size=(512, 512),
         # )
-        # self.llm = GeminiCost(
-        #     number_of_clients=self.number_of_clients,
-        #     number_of_cameras_per_client=self.number_of_cameras_per_client,
-        #     _model_name="Gemini_1.5_Flash",
-        #     _avg_working_hours=12,
-        # )
-        self.llm = GPUPerHourCost(
+        self.llm = GeminiCost(
             number_of_clients=self.number_of_clients,
             number_of_cameras_per_client=self.number_of_cameras_per_client,
-            _model_name="openbmb/MiniCPM-V-2_6-int4",
+            _model_name="Gemini_1.5_Flash",
             _avg_working_hours=12,
         )
+        # self.llm = GPUPerHourCost(
+        #     number_of_clients=self.number_of_clients,
+        #     number_of_cameras_per_client=self.number_of_cameras_per_client,
+        #     _model_name="openbmb/MiniCPM-V-2_6-int4",
+        #     _avg_working_hours=12,
+        # )
 
     def generate_cost_report(self):
         report = "Startup Cost Estimate Report\n"
