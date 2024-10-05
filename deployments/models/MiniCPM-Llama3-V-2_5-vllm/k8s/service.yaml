@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: MiniCPM-Llama3-V-2_5-vllm-server-service
+spec:
+  type: LoadBalancer
+  selector:
+    app: MiniCPM-Llama3-V-2_5-vllm-server
+  ports:
+    - protocol: TCP
+      port: 8000
+      targetPort: 8000

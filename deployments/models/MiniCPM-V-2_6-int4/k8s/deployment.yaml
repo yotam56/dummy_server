@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: MiniCPM-V-2_6-int4-server-deployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: MiniCPM-V-2_6-int4-server
+  template:
+    metadata:
+      labels:
+        app: MiniCPM-V-2_6-int4-server
+    spec:
+      containers:
+      - name: my-k8s-app-container
+        image: yotam56/detector-server:MiniCPM-V-2_6-int4
+        ports:
+        - containerPort: 8000
+      imagePullSecrets:
+      - name: regcred

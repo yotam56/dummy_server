@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dummy-server-deployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: dummy-server
+  template:
+    metadata:
+      labels:
+        app: dummy-server
+    spec:
+      containers:
+      - name: my-k8s-app-container
+        image: yotam56/detector-server:dummy
+        ports:
+        - containerPort: 8000
+      imagePullSecrets:
+      - name: regcred

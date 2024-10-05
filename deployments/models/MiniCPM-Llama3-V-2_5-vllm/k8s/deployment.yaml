@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: MiniCPM-Llama3-V-2_5-vllm-server-deployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: MiniCPM-Llama3-V-2_5-vllm-server
+  template:
+    metadata:
+      labels:
+        app: MiniCPM-Llama3-V-2_5-vllm-server
+    spec:
+      containers:
+      - name: my-k8s-app-container
+        image: yotam56/detector-server:MiniCPM-Llama3-V-2_5-vllm
+        ports:
+        - containerPort: 8000
+      imagePullSecrets:
+      - name: regcred

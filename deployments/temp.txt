@@ -1,0 +1,13 @@
+docker build -f deployments/models/MiniCPM-V-2_6-int4/Dockerfile -t detector-server:MiniCPM-V-2_6-int4 .
+
+docker tag detector-server:MiniCPM-V-2_6-int4 yotam56/detector-server:MiniCPM-V-2_6-int4
+
+docker push yotam56/detector-server:MiniCPM-V-2_6-int4
+
+
+minikube start
+
+kubectl apply -f deployments/models/MiniCPM-V-2_6-int4/k8s/deployment.yaml
+kubectl apply -f deployments/models/MiniCPM-V-2_6-int4/k8s/service.yaml
+
+minikube tunnel
