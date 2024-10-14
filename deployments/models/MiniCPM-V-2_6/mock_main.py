@@ -9,6 +9,7 @@ import ray.serve as serve
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import torch
 import logging
+import json
 
 # Initialize FastAPI app
 app = FastAPI()
@@ -18,10 +19,20 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-# Define the request schema
+# Define the request schema with a helper method to handle Ray's Request objects
 class RequestModel(BaseModel):
     text: str
     image_base64: str  # This won't be used in the smaller model, but kept for consistency
+
+    @classmethod
+    async def from_request(cls, request) -> "RequestModel":
+        """Helper function to extract data from Ray's Request object."""
+        body = await request.body()
+        try:
+            data = json.loads(body)
+            return cls(**data)  # Automatically map to RequestModel
+        except json.JSONDecodeError as e:
+            raise HTTPException(status_code=400, detail="Invalid JSON body") from e
 
 
 # Function to decode image from Base64 string (not used, but kept for consistency)
@@ -52,10 +63,12 @@ class DistilBERTService:
         logger.info(f"Model loaded and moved to {self.device}")
 
     @serve.batch(max_batch_size=4, batch_wait_timeout_s=0.2)
-    async def __call__(self, request_list: List[RequestModel]):
+    async def __call__(self, request_list):
         logger.info(f"Received batch of size: {len(request_list)}")
-        # Collect texts from the request list for batching
-        texts = [request.text for request in request_list]
+
+        # Use the RequestModel's helper to process Ray's Request objects
+        request_models = [await RequestModel.from_request(request) for request in request_list]
+        texts = [req_model.text for req_model in request_models]
 
         # Tokenize the batch of texts
         inputs = self.tokenizer(texts, return_tensors="pt", padding=True, truncation=True).to(self.device)
