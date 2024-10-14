@@ -26,37 +26,7 @@ import os
 class VLLMPredictDeployment:
     def __init__(self, **kwargs):
         """
-        Construct a VLLM deployment.
-
-        Refer to https://github.com/vllm-project/vllm/blob/main/vllm/engine/arg_utils.py
-        for the full list of arguments.
-
-        Args:
-            model: name or path of the huggingface model to use
-            download_dir: directory to download and load the weights,
-                default to the default cache dir of huggingface.
-            use_np_weights: save a numpy copy of model weights for
-                faster loading. This can increase the disk usage by up to 2x.
-            use_dummy_weights: use dummy values for model weights.
-            dtype: data type for model weights and activations.
-                The "auto" option will use FP16 precision
-                for FP32 and FP16 models, and BF16 precision.
-                for BF16 models.
-            seed: random seed.
-            worker_use_ray: use Ray for distributed serving, will be
-                automatically set when using more than 1 GPU
-            pipeline_parallel_size: number of pipeline stages.
-            tensor_parallel_size: number of tensor parallel replicas.
-            block_size: token block size.
-            swap_space: CPU swap space size (GiB) per GPU.
-            gpu_memory_utilization: the percentage of GPU memory to be used for
-                the model executor
-            max_num_batched_tokens: maximum number of batched tokens per iteration
-            max_num_seqs: maximum number of sequences per iteration.
-            disable_log_stats: disable logging statistics.
-            engine_use_ray: use Ray to start the LLM engine in a separate
-                process as the server process.
-            disable_log_requests: disable logging requests.
+        Initialize VLLM with support for multimodal (text + image) input.
         """
         os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
         kwargs["gpu_memory_utilization"] = kwargs.get("gpu_memory_utilization", 0.8)
@@ -79,40 +49,35 @@ class VLLMPredictDeployment:
         await self.engine.abort(request_id)
 
     async def __call__(self, request: Request) -> Response:
-        """Generate completion for the request.
-
-        The request should be a JSON object with the following fields:
-        - prompt: the prompt to use for the generation.
-        - image: the image as a base64 encoded string.
-        - stream: whether to stream the results or not.
-        - other fields: the sampling parameters (See `SamplingParams` for details).
+        """
+        Generate completion for multimodal input (text + image).
         """
         request_dict = await request.json()
-        prompt = request_dict.pop("prompt")
-        image_base64 = request_dict.pop("image", None)
-        stream = request_dict.pop("stream", False)
+        prompt = request_dict.pop("prompt")  # Text prompt
+        image_base64 = request_dict.pop("image", None)  # Base64 image data
+        stream = request_dict.pop("stream", False)  # Streaming option
 
         if image_base64:
-            image = decode_base64_to_image(image_base64)
+            image = decode_base64_to_image(image_base64)  # Decode image
         else:
             raise HTTPException(status_code=400, detail="Image data is required.")
 
         sampling_params = SamplingParams(**request_dict)
         request_id = random_uuid()
 
-        # Prepare the input as per vLLM expectations
+        # Combine text and image as multimodal input
         inputs = {
             "prompt": prompt,
             "multi_modal_data": {
-                "image": image
+                "image": image  # Pass decoded image
             }
         }
 
+        # Generate using the multimodal inputs
         results_generator = self.engine.generate(inputs, sampling_params, request_id)
 
         if stream:
             background_tasks = BackgroundTasks()
-            # Using background_tasks to abort the request if the client disconnects.
             background_tasks.add_task(self.may_abort_request, request_id)
             return StreamingResponse(
                 self.stream_results(results_generator), background=background_tasks
@@ -122,15 +87,13 @@ class VLLMPredictDeployment:
         final_output = None
         async for request_output in results_generator:
             if await request.is_disconnected():
-                # Abort the request if the client disconnects.
                 await self.engine.abort(request_id)
                 return Response(status_code=499)
             final_output = request_output
 
         assert final_output is not None
         text_outputs = [output.text for output in final_output.outputs]
-        ret = {"text": text_outputs}
-        return Response(content=json.dumps(ret))
+        return Response(content=json.dumps({"text": text_outputs}))
 
 
 ########################### old code #########################
