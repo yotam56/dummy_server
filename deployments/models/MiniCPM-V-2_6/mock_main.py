@@ -1,3 +1,6 @@
+import os
+import json
+import logging
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import List
@@ -7,16 +10,14 @@ import io
 import ray
 import ray.serve as serve
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
+from utils.logger import Logger
 import torch
-import logging
-import json
+
+# Disable Ray's log deduplication
+os.environ["RAY_DEDUP_LOGS"] = "0"
 
 # Initialize FastAPI app
 app = FastAPI()
-
-# Set up logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 
 # Define the request schema with a helper method to handle Ray's Request objects
@@ -54,17 +55,20 @@ serve.start()
 @serve.deployment(num_replicas=2)
 class DistilBERTService:
     def __init__(self):
-        logger.info("Initializing DistilBERTService")
+        # Initialize custom logger for each replica
+        self.logger = Logger(logging.DEBUG).get_logger()
+        self.logger.info("Initializing DistilBERTService")
+
         # Use a small, lightweight transformer model (DistilBERT)
         self.tokenizer = AutoTokenizer.from_pretrained('distilbert-base-uncased')
         self.model = AutoModelForSequenceClassification.from_pretrained('distilbert-base-uncased', num_labels=2)
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.model = self.model.eval().to(self.device)
-        logger.info(f"Model loaded and moved to {self.device}")
+        self.logger.info(f"Model loaded and moved to {self.device}")
 
-    @serve.batch(max_batch_size=4, batch_wait_timeout_s=0.2)
+    @serve.batch(max_batch_size=8, batch_wait_timeout_s=0.2)
     async def __call__(self, request_list):
-        logger.info(f"Received batch of size: {len(request_list)}")
+        self.logger.info(f"Replica {os.getpid()} processing batch of size: {len(request_list)}")
 
         # Use the RequestModel's helper to process Ray's Request objects
         request_models = [await RequestModel.from_request(request) for request in request_list]
@@ -72,17 +76,17 @@ class DistilBERTService:
 
         # Tokenize the batch of texts
         inputs = self.tokenizer(texts, return_tensors="pt", padding=True, truncation=True).to(self.device)
-        logger.info(f"Tokenized inputs: {inputs}")
+        self.logger.info(f"Tokenized inputs: {inputs}")
 
         # Perform inference
         with torch.no_grad():
             outputs = self.model(**inputs)
-        logger.info(f"Inference outputs: {outputs.logits}")
+        self.logger.info(f"Inference outputs: {outputs.logits}")
 
         # Generate results for each input
         predictions = torch.argmax(outputs.logits, dim=-1)
         results = [{"text": text, "prediction": int(pred)} for text, pred in zip(texts, predictions)]
-        logger.info(f"Batch processed with results: {results}")
+        self.logger.info(f"Batch processed with results: {results}")
 
         return results
 
@@ -103,5 +107,4 @@ async def predict(request: RequestModel):
 # Run the app
 if __name__ == "__main__":
     import uvicorn
-
     uvicorn.run(app, host="0.0.0.0", port=8000)
