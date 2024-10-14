@@ -53,15 +53,15 @@ serve.start()
 
 # Service for inference
 @serve.deployment(num_replicas=2)
-class DistilBERTService:
+class TinyBERTService:
     def __init__(self):
         # Initialize custom logger for each replica
         self.logger = Logger(logging.DEBUG).get_logger()
-        self.logger.info("Initializing DistilBERTService")
+        self.logger.info("Initializing TinyBERTService")
 
-        # Use a small, lightweight transformer model (DistilBERT)
-        self.tokenizer = AutoTokenizer.from_pretrained('distilbert-base-uncased')
-        self.model = AutoModelForSequenceClassification.from_pretrained('distilbert-base-uncased', num_labels=2)
+        # Use TinyBERT (this is the only change)
+        self.tokenizer = AutoTokenizer.from_pretrained('huawei-noah/TinyBERT_General_4L_312D')
+        self.model = AutoModelForSequenceClassification.from_pretrained('huawei-noah/TinyBERT_General_4L_312D', num_labels=2)
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.model = self.model.eval().to(self.device)
         self.logger.info(f"Model loaded and moved to {self.device}")
@@ -90,9 +90,8 @@ class DistilBERTService:
 
         return results
 
-
 # Deploy the service using serve.run (new Ray API)
-serve.run(DistilBERTService.bind())
+serve.run(TinyBERTService.bind())
 
 
 # FastAPI Route
