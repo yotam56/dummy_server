@@ -1,0 +1,94 @@
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+from typing import List
+from PIL import Image
+import base64
+import io
+import ray
+import ray.serve as serve
+from transformers import AutoTokenizer, AutoModelForSequenceClassification
+import torch
+import logging
+
+# Initialize FastAPI app
+app = FastAPI()
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
+# Define the request schema
+class RequestModel(BaseModel):
+    text: str
+    image_base64: str  # This won't be used in the smaller model, but kept for consistency
+
+
+# Function to decode image from Base64 string (not used, but kept for consistency)
+def decode_image(image_base64: str) -> Image.Image:
+    try:
+        image_data = base64.b64decode(image_base64)
+        image = Image.open(io.BytesIO(image_data)).convert('RGB')
+        return image
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Invalid image format: {str(e)}")
+
+
+# Start Ray and Serve
+ray.init(ignore_reinit_error=True)
+serve.start()
+
+
+# Service for inference
+@serve.deployment(num_replicas=2)
+class DistilBERTService:
+    def __init__(self):
+        logger.info("Initializing DistilBERTService")
+        # Use a small, lightweight transformer model (DistilBERT)
+        self.tokenizer = AutoTokenizer.from_pretrained('distilbert-base-uncased')
+        self.model = AutoModelForSequenceClassification.from_pretrained('distilbert-base-uncased', num_labels=2)
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.model = self.model.eval().to(self.device)
+        logger.info(f"Model loaded and moved to {self.device}")
+
+    @serve.batch(max_batch_size=4, batch_wait_timeout_s=0.2)
+    async def __call__(self, request_list: List[RequestModel]):
+        logger.info(f"Received batch of size: {len(request_list)}")
+        # Collect texts from the request list for batching
+        texts = [request.text for request in request_list]
+
+        # Tokenize the batch of texts
+        inputs = self.tokenizer(texts, return_tensors="pt", padding=True, truncation=True).to(self.device)
+        logger.info(f"Tokenized inputs: {inputs}")
+
+        # Perform inference
+        with torch.no_grad():
+            outputs = self.model(**inputs)
+        logger.info(f"Inference outputs: {outputs.logits}")
+
+        # Generate results for each input
+        predictions = torch.argmax(outputs.logits, dim=-1)
+        results = [{"text": text, "prediction": int(pred)} for text, pred in zip(texts, predictions)]
+        logger.info(f"Batch processed with results: {results}")
+
+        return results
+
+
+# Deploy the service using serve.run (new Ray API)
+serve.run(DistilBERTService.bind())
+
+
+# FastAPI Route
+@app.post("/predict")
+async def predict(request: RequestModel):
+    # Forward the request to the Ray Serve deployment
+    handle = serve.get_deployment("DistilBERTService").get_handle()
+    result = await handle.remote(request)
+    return {"result": await result}
+
+
+# Run the app
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run(app, host="0.0.0.0", port=8000)
