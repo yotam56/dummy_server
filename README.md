@@ -29,3 +29,49 @@ On first time run:
 `pre-commit install --install-hooks -t pre-commit -t commit-msg`
 ## set you own OpenAI key as enviroment variable
 for example: `export OPENAI_API_KEY=<your_api_key_here>`
+
+## Docker:
+
+### Download Docker Desktop (only once):
+follow the instructions: https://www.docker.com/products/docker-desktop/
+
+### Connect to Docker Hub:
+```
+docker login
+```
+### Build Docker image locally:
+```
+docker build -f deployments/models/dummy/Dockerfile -t detector-server:dummy .
+```
+
+### Tag your image for the registry:
+```
+docker tag detector-server:dummy yotam56/detector-server:dummy
+```
+
+### Push the image to Docker Hub:
+```
+docker push yotam56/detector-server:dummy
+```
+
+## K8S:
+
+### install minikube (only once):
+
+follow the instructions: https://minikube.sigs.k8s.io/docs/start/?arch=%2Fmacos%2Fx86-64%2Fstable%2Fbinary+download
+
+### Run minikube:
+`minikube start`
+
+### Apply k8s resources:
+```
+kubectl apply -f deployments/models/dummy/k8s/deployment.yaml
+kubectl apply -f deployments/models/dummy/k8s/service.yaml
+```
+
+### Expose the load balancer:
+```
+minikube tunnel
+```
+now you can use `kubectl get services` to see the "EXTERNAL-IP" to communicate with your service.
+for example: `curl -X GET "http://127.0.0.1:8000/colab_hello"`

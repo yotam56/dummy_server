@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: blip-server-deployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: blip-server
+  template:
+    metadata:
+      labels:
+        app: blip-server
+    spec:
+      containers:
+      - name: my-k8s-app-container
+        image: yotam56/detector-server:blip
+        ports:
+        - containerPort: 8000
+      imagePullSecrets:
+      - name: regcred

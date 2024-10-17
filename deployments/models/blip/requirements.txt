@@ -1,0 +1,3 @@
+torch
+ray[data,serve]
+numpy==1.26.4
