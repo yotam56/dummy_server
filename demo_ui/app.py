@@ -1,5 +1,7 @@
 import streamlit as st
 from PIL import Image
+# Import from your gpt_connector file (adjust the import path as needed)
+from gpt_connector import encode_image_to_base, analyze_image_with_chatgpt
 
 # Page Configuration
 st.set_page_config(page_title="VisionAeye Demo", layout="wide")
@@ -47,7 +49,7 @@ st.title("VisionAeye Demo")
 # Upload Section
 st.subheader("Upload your image and enter a prompt")
 
-# Initialize session state for storing responses and images
+# Initialize session state
 if "messages" not in st.session_state:
     st.session_state["messages"] = []
 if "uploaded_image" not in st.session_state:
@@ -58,7 +60,7 @@ if "initial_prompt_sent" not in st.session_state:
 # Image Upload and Prompt Input
 uploaded_image = st.file_uploader("Upload an Image", type=["png", "jpg", "jpeg"], key="image_upload")
 
-# Disable initial prompt input after first submission
+# Disable the prompt input after first submission
 if not st.session_state["initial_prompt_sent"]:
     prompt_text = st.text_input("Enter your prompt here:", key="prompt_input")
 else:
@@ -67,11 +69,18 @@ else:
 # Submit Button for Initial Prompt
 if st.button("Send"):
     if uploaded_image and prompt_text:
-        # Append the user's input
+        # User message
         st.session_state["messages"].append({"role": "user", "content": prompt_text})
-
-        # Simulated AI Response
-        response = "This is a simulated response for the provided input."
+        
+        # Convert uploaded image to PIL Image
+        image = Image.open(uploaded_image)
+        # Encode image to base64
+        image_base64 = encode_image_to_base(image)
+        
+        # Call GPT function to analyze image and prompt
+        response = analyze_image_with_chatgpt(image_base64, prompt=prompt_text)
+        
+        # Append bot response
         st.session_state["messages"].append({"role": "bot", "content": response})
         st.session_state["uploaded_image"] = uploaded_image
         st.session_state["initial_prompt_sent"] = True
@@ -93,9 +102,7 @@ with col2:
 # Left Column: Chat Display
 with col1:
     st.subheader("Chat")
-    chat_html = """
-    <div class="chat-container">
-    """
+    chat_html = "<div class='chat-container'>"
     for message in st.session_state["messages"]:
         if message["role"] == "user":
             chat_html += f"<div class='user-message'><b>You:</b> {message['content']}</div>"
@@ -103,12 +110,3 @@ with col1:
             chat_html += f"<div class='bot-message'><b>Response:</b> {message['content']}</div>"
     chat_html += "</div>"
     st.markdown(chat_html, unsafe_allow_html=True)
-
-    # Input Box for Follow-Up Questions
-    followup_text = st.text_area("Type your next question here...", key="next_input", height=100,
-                                 placeholder="Continue the conversation...")
-    if st.button("Send Follow-Up"):
-        if followup_text:
-            st.session_state["messages"].append({"role": "user", "content": followup_text})
-            response = "This is a simulated response for your follow-up question."
-            st.session_state["messages"].append({"role": "bot", "content": response})
