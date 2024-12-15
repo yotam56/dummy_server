@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: my-k8s-app-container
-        image: yotam56/detector-server:blip-single
+        image: yotam56/detector-server:blip-slim
         ports:
         - containerPort: 8000
       imagePullSecrets:

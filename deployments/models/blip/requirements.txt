@@ -1,3 +1,2 @@
-torch
-ray[data,serve]
+torch==2.0.1
 numpy==1.26.4

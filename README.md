@@ -60,6 +60,15 @@ docker push yotam56/detector-server:dummy
 
 follow the instructions: https://minikube.sigs.k8s.io/docs/start/?arch=%2Fmacos%2Fx86-64%2Fstable%2Fbinary+download
 
+### Connect k8s to Docker Hub:
+```
+kubectl create secret docker-registry regcred \
+  --docker-server=https://index.docker.io/v1/ \
+  --docker-username=<your-dockerhub-username> \
+  --docker-password=<your-dockerhub-password> \
+  --docker-email=<your-email>
+```
+
 ### Run minikube:
 `minikube start`
 
