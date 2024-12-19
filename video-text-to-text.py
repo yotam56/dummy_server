@@ -3,8 +3,6 @@ import cv2
 import base64
 import openai
 
-# Set your OpenAI API key
-# openai.api_key = os.getenv("OPENAI_API_KEY", "YOUR_API_KEY_HERE")
 
 def get_video_frames_per_second(video_path):
     """
@@ -83,16 +81,19 @@ def analyze_image_with_chatgpt(image_base64, second, previous_explanations = "",
 
 def summarize_entire_video(previous_explanations):
     """
-    Create a prompt that contains all the previous explanations and asks the model
-    to summarize the entire video into a cohesive narrative.
+    Creates a prompt that includes all previous frame-by-frame explanations and
+    asks the model to produce a unified, continuous narrative of the video as if
+    a viewer is watching it unfold in real-time, integrating all the past details
+    smoothly.
     """
     prompt = (
-        "Below is a detailed narrative extracted from a video, broken down by each second:\n\n"
+        "Below are detailed, second-by-second explanations of a video:\n\n"
         f"{previous_explanations}\n\n"
-        "Now, please provide a comprehensive summary of the entire video. "
-        "Focus on the main events, the visual context, and the narrative flow "
-        "rather than the second-by-second details. Your summary should be cohesive, "
-        "concise, and should capture the key story and highlights of the video."
+        "Please use this information to provide a continuous, straightforward explanation "
+        "of what occurs in the video from start to finish. Do not list events by the second. "
+        "Instead, combine all the details into one plain, coherent description that "
+        "accurately reflects everything observed, maintaining an understanding of the sequence "
+        "of events as they happen over time."
     )
     return prompt
 
