@@ -99,16 +99,15 @@ def summarize_request(prompt):
     return response.choices[0].message.content.strip()
 
 
-def general_request(prompt, content):
+def general_request(prompt, content=None):
+    messages = []
+    if content:
+        messages.append({"role": "system", "content": content})
+    messages.append({"role": "user", "content": prompt})
+
     response = openai.chat.completions.create(
         model="gpt-4o",
-        messages=[
-            {"role": "system", "content": content},
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ]
+        messages=messages
     )
     return response.choices[0].message.content.strip()
 
