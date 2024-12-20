@@ -76,16 +76,15 @@ def render_chat(container):
     chat_html += "</div>"
     container.markdown(chat_html, unsafe_allow_html=True)
 
-def typing_animation(message_index, full_text, chat_container, delay=1):
+def typing_animation(full_text, chat_container, delay=1):
     """
     Prints the mock description line by line with a short delay.
-    Each line is separated by a blank line for spacing.
+    Each line now appears as a new message.
     """
-    st.session_state["messages"][message_index]["content"] = ""
     lines = full_text.strip().split("\n")
     for line in lines:
-        # Add the current line to the bot's message content
-        st.session_state["messages"][message_index]["content"] += line + "\n\n"
+        # Add a new bot message for each line
+        st.session_state["messages"].append({"role": "bot", "content": line})
         render_chat(chat_container)
         time.sleep(delay)
 
@@ -118,8 +117,6 @@ with col2:
             # If not played before, trigger the mock description
             if not st.session_state["video_played"]:
                 st.session_state["video_played"] = True
-                # Add a bot message for the mock video description
-                st.session_state["messages"].append({"role": "bot", "content": ""})
 
 with col1:
     st.subheader("Chat")
@@ -127,9 +124,9 @@ with col1:
 
     # If the video has been "played" and is a video, trigger the mock typing animation
     if st.session_state["video_played"] and st.session_state["file_type"] == "video":
-        # Find the last bot message index (just appended)
-        bot_message_index = len(st.session_state["messages"]) - 1
-        typing_animation(bot_message_index, mock_video_description(), chat_container)
+        # Add empty user message to start the bot response
+        # Actually no need to add an empty bot message now; typing_animation adds messages
+        typing_animation(mock_video_description(), chat_container)
 
     # Input and Button
     prompt_text = st.text_input("Enter your prompt here:", key="prompt_input")
@@ -147,9 +144,8 @@ with col1:
                 # For video, currently no processing; just a placeholder
                 response = "Video analysis is not yet implemented for custom prompts."
 
-            # Add bot message and update with typing animation
-            st.session_state["messages"].append({"role": "bot", "content": ""})
-            typing_animation(len(st.session_state["messages"]) - 1, response, chat_container)
+            # Animate the bot response line by line
+            typing_animation(response, chat_container)
         else:
             st.warning("Please upload a file and enter a prompt.")
 
