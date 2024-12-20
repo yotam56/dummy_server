@@ -5,7 +5,7 @@ import tempfile
 
 from mock import mock_video_description
 from gpt_connector import encode_image_to_base, analyze_image_with_chatgpt
-from video_anlyzer import analyze_video
+from video_anlyzer import analyze_video, general_request
 
 # Page Configuration
 st.set_page_config(page_title="VisionAeye Demo", layout="wide")
@@ -57,7 +57,7 @@ st.markdown(
 # Header
 st.title("VisionAeye Demo")
 
-# Initialize session state
+# Initialize session state for the analysis chat and uploads
 if "video_messages" not in st.session_state:
     st.session_state["video_messages"] = []
 if "uploaded_file" not in st.session_state:
@@ -69,24 +69,19 @@ if "video_played" not in st.session_state:
 if "waiting_for_response" not in st.session_state:
     st.session_state["waiting_for_response"] = False
 
+# Initialize session state for modal chat visibility and messages
 if "show_chat" not in st.session_state:
     st.session_state["show_chat"] = False
 if "messages" not in st.session_state:
     st.session_state["messages"] = [
-        {"role": "assistant", "content": "Hi! Is there anything specific you would like me to focus on? If so, could you please elaborate?"}
+        {"role": "assistant", "content": "Hi! How can I help you today?"}
     ]
 
-def typing_animation(full_text, chat_container, delay=1):
-    """
-    Prints the response line by line with a short delay.
-    """
-    lines = full_text.strip().split("\n")
-    for line in lines:
-        st.session_state["messages"].append({"role": "bot", "content": line})
-        render_chat(chat_container)
-        time.sleep(delay)
+# Button to toggle chat modal
+if st.button("Chat"):
+    st.session_state["show_chat"] = not st.session_state["show_chat"]
 
-# File uploader at the top (now supports videos)
+# File uploader (supports images and videos)
 uploaded_file = st.file_uploader("Upload an Image or Video", type=["png", "jpg", "jpeg", "mp4", "mov"])
 st.markdown("<h2 style='text-align: left;'>Video Analysis Chat</h2>", unsafe_allow_html=True)
 
@@ -103,6 +98,7 @@ col1, col2 = st.columns([2, 1])
 
 # Left column: Video analysis chat display only
 with col1:
+    # Just display whatever is in video_messages
     def render_analysis_chat():
         chat_html = "<div class='chat-container'>"
         for message in st.session_state["video_messages"]:
@@ -116,6 +112,7 @@ with col1:
     video_chat_container = st.empty()
     render_analysis_chat()
 
+# Right column: Display uploaded media
 with col2:
     if st.session_state["uploaded_file"] and st.session_state["file_type"] == "image":
         # Display image
@@ -125,17 +122,11 @@ with col2:
     elif st.session_state["uploaded_file"] and st.session_state["file_type"] == "video":
         st.video(st.session_state["uploaded_file"], format="video/mp4", start_time=0)
         if st.button("Play Video"):
+            # Once play is clicked, analyze video
             if not st.session_state["video_played"]:
-                # Determine focus_prompt
                 focus_prompt = ''
-                user_focus_response = ""
-                for msg in reversed(st.session_state["messages"]):
-                    if msg["role"] == "user":
-                        user_focus_response = msg["content"].strip()
-                        break
-
-                if user_focus_response.lower().startswith("yes"):
-                    focus_prompt = user_focus_response
+                # Since we removed GPT conversation logic, focus_prompt is empty here
+                # In future, if you reintroduce logic to determine focus from user responses, you can do it here.
 
                 # Save the uploaded video to a temp file
                 with tempfile.NamedTemporaryFile(delete=False, suffix="." + file_extension) as temp:
@@ -148,26 +139,22 @@ with col2:
                     focus_prompt=focus_prompt
                 )
 
-                # Append the entire result as one bot message
+                # Append results to video_messages
                 response_text = ""
                 for sec, explanation in explanations_map.items():
                     response_text += f"{sec} {explanation}\n"
                 response_text += f"Final summary: {final_res}\n"
 
                 st.session_state["video_played"] = True
-                st.session_state["video_messages"].append({"role": "bot", "content": response_text.strip()})
+                # Add to video_messages as bot role
+                for line in response_text.strip().split("\n"):
+                    st.session_state["video_messages"].append({"role": "bot", "content": line})
                 render_analysis_chat()
-
-# Place the Chat button at the bottom under all objects from the left
-# We do this after the columns have been declared
-st.divider()
-if st.button("Chat"):
-    st.session_state["show_chat"] = not st.session_state["show_chat"]
 
 # If the chat modal is open, display the provided chat interface
 if st.session_state["show_chat"]:
     st.markdown("### Chat")
-    # Display chat messages
+    # Display chat messages from history
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
@@ -176,18 +163,15 @@ if st.session_state["show_chat"]:
     if prompt := st.chat_input("Enter Your Prompt Here"):
         # Add user message to chat history
         st.session_state.messages.append({"role": "user", "content": prompt})
+        # Display user message
         with st.chat_message("user"):
             st.markdown(prompt)
 
-        # Use the older version logic with focus_prompt:
-        # If an image is uploaded, we analyze it with chatGPT logic.
-        # If a video is uploaded, return the old "not implemented" message.
-        if st.session_state["uploaded_file"] and st.session_state["file_type"] == "image":
-            image_base64 = encode_image_to_base(Image.open(st.session_state["uploaded_file"]))
-            response = analyze_image_with_chatgpt(image_base64, prompt=prompt)
-        else:
-            response = "Video analysis for custom prompts after initial focus is not implemented."
+        # Generate assistant response using general_request
+        reply = general_request(prompt=prompt)
 
-        st.session_state.messages.append({"role": "assistant", "content": response})
+        # Add assistant response to chat history
+        st.session_state.messages.append({"role": "assistant", "content": reply})
+        # Display assistant response
         with st.chat_message("assistant"):
-            st.markdown(response)
+            st.markdown(reply)
