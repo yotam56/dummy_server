@@ -64,6 +64,8 @@ if "file_type" not in st.session_state:
     st.session_state["file_type"] = None
 if "video_played" not in st.session_state:
     st.session_state["video_played"] = False
+if "waiting_for_response" not in st.session_state:
+    st.session_state["waiting_for_response"] = False
 
 def render_chat(container):
     """Renders the chat messages in a single container."""
@@ -101,6 +103,14 @@ if uploaded_file:
         st.session_state["file_type"] = "video"
         st.session_state["uploaded_file"] = uploaded_file
 
+    # Add a question in the chat box after uploading a file
+    time.sleep(0.5)
+    if not st.session_state["waiting_for_response"]:
+        st.session_state["messages"].append({"role": "bot", "content": "“Is there anything specific you would like me "
+                                                                       "to focus on? If so, could you please "
+                                                                       "elaborate?”"})
+        st.session_state["waiting_for_response"] = True
+
 # Create the layout for chat and image/video side-by-side
 col1, col2 = st.columns([2, 1])
 
@@ -136,16 +146,23 @@ with col1:
             st.session_state["messages"].append({"role": "user", "content": prompt_text})
             render_chat(chat_container)  # Update the chat to show user input
 
-            if st.session_state["file_type"] == "image":
-                # Process the image for GPT analysis
-                image_base64 = encode_image_to_base(Image.open(st.session_state["uploaded_file"]))
-                response = analyze_image_with_chatgpt(image_base64, prompt=prompt_text)
-            else:
-                # For video, currently no processing; just a placeholder
-                response = "Video analysis is not yet implemented for custom prompts."
+            if st.session_state["waiting_for_response"]:
+                st.session_state["messages"].append({"role": "bot", "content": "Got it!"})
+                st.session_state["waiting_for_response"] = False
+                render_chat(chat_container)
 
-            # Animate the bot response line by line
-            typing_animation(response, chat_container)
+            else:
+                if st.session_state["file_type"] == "image":
+                    # Process the image for GPT analysis
+                    image_base64 = encode_image_to_base(Image.open(st.session_state["uploaded_file"]))
+                    response = analyze_image_with_chatgpt(image_base64, prompt=prompt_text)
+                else:
+                    # For video, currently no processing; just a placeholder
+                    response = "Video analysis is not yet implemented for custom prompts."
+
+                # Animate the bot response line by line
+                typing_animation(response, chat_container)
+
         else:
             st.warning("Please upload a file and enter a prompt.")
 
