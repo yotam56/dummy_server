@@ -99,6 +99,19 @@ def summarize_request(prompt):
     )
     return response.choices[0].message.content.strip()
 
+def general_request(prompt, content):
+    response = openai.chat.completions.create(
+        model="gpt-4o",
+        messages=[
+            {"role": "system", "content": content},
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ]
+    )
+    return response.choices[0].message.content.strip()
+
 
 
 def summarize_entire_video_prompt(previous_explanations):
