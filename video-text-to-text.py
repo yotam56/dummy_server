@@ -85,7 +85,23 @@ def analyze_image_with_chatgpt(image_base64, second, previous_explanations = "",
     )
     return response.choices[0].message.content.strip()
 
-def summarize_entire_video(previous_explanations):
+
+def summarize_request(prompt):
+    response = openai.chat.completions.create(
+        model="gpt-4o",
+        messages=[
+            {"role": "system", "content": "Your task is to generate a summary of a video based on a prior second-by-second analysis."},
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ]
+    )
+    return response.choices[0].message.content.strip()
+
+
+
+def summarize_entire_video_prompt(previous_explanations):
     prompt = (
         "Below are detailed, second-by-second explanations of a video:\n\n"
         f"{previous_explanations}\n\n"
@@ -101,8 +117,8 @@ def summarize_entire_video(previous_explanations):
     # Hard-coded path to your local MP4 file
 def analyze_video(video_path = "/Users/nadavkurin/coding/VisionAEye/detector-server/WhatsApp Video 2024-12-15 at 19.06.52.mp4", focus_prompt=""):
 
-    explanations = {}
-    previous_explanations = ""  # Will hold a string of all previous explanations for context
+    explanations_map = {}
+    previous_explanations_string = ""  # Will hold a string of all previous explanations for context
     frame_count = 0
 
     # Extract frames per second and analyze
@@ -110,19 +126,19 @@ def analyze_video(video_path = "/Users/nadavkurin/coding/VisionAEye/detector-ser
         image_b64 = frame_to_base64(frame)
 
         # Pass all previous explanations as context
-        explanation = analyze_image_with_chatgpt(image_b64, sec, previous_explanations = previous_explanations, focus_prompt=focus_prompt)
+        explanation = analyze_image_with_chatgpt(image_b64, sec, previous_explanations = previous_explanations_string, focus_prompt=focus_prompt)
 
-        explanations[sec] = explanation
-        previous_explanations += f"Second {sec}: {explanation}\n\n"
+        explanations_map[sec] = explanation
+        previous_explanations_string += f"Second {sec}: {explanation}.\n\n"
 
         frame_count += 1
         
-    final_res = analyze_image_with_chatgpt(image_b64, sec, previous_explanations = "", summarize_promt=summarize_entire_video(previous_explanations))
+    final_res = summarize_request(prompt=summarize_entire_video_prompt(previous_explanations_string))
 
-    return explanations, final_res
+    return explanations_map, final_res, previous_explanations_string
 
 if __name__ == "__main__":
-    explanations, final_res = analyze_video(focus_prompt = "Focus on the two persons")
+    explanations, final_res, _ = analyze_video()
     for sec, explanation in explanations.items():
         print(f'Second {sec}: \n {explanation} \n')
     
