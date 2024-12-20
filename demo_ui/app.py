@@ -73,20 +73,21 @@ if "show_chat" not in st.session_state:
     st.session_state["show_chat"] = False
 if "messages" not in st.session_state:
     st.session_state["messages"] = [
-        {"role": "assistant", "content": "Hi! Is there anything specific you would like me to focus on? If so, could you please elaborate?"}
+        {"role": "assistant", "content": "Hi! How can I help you today?"}
     ]
 
-def typing_animation(full_text, chat_container, delay=1):
+# Typing animation function for line-by-line output
+def typing_animation(full_text, chat_container, message_list, delay=1):
     """
     Prints the response line by line with a short delay.
     """
     lines = full_text.strip().split("\n")
     for line in lines:
-        st.session_state["messages"].append({"role": "bot", "content": line})
-        render_chat(chat_container)
+        message_list.append({"role": "bot", "content": line})
+        render_analysis_chat(chat_container, message_list)
         time.sleep(delay)
 
-# File uploader at the top (now supports videos)
+# File uploader (supports images and videos)
 uploaded_file = st.file_uploader("Upload an Image or Video", type=["png", "jpg", "jpeg", "mp4", "mov"])
 st.markdown("<h2 style='text-align: left;'>Video Analysis Chat</h2>", unsafe_allow_html=True)
 
@@ -103,18 +104,19 @@ col1, col2 = st.columns([2, 1])
 
 # Left column: Video analysis chat display only
 with col1:
-    def render_analysis_chat():
+    def render_analysis_chat(container, messages):
+        """Renders the video analysis chat messages."""
         chat_html = "<div class='chat-container'>"
-        for message in st.session_state["video_messages"]:
+        for message in messages:
             if message["role"] == "user":
                 chat_html += f"<div class='user-message'><b>You:</b> {message['content']}</div>"
             else:
                 chat_html += f"<div class='bot-message'>{message['content']}</div>"
         chat_html += "</div>"
-        st.markdown(chat_html, unsafe_allow_html=True)
+        container.markdown(chat_html, unsafe_allow_html=True)
 
     video_chat_container = st.empty()
-    render_analysis_chat()
+    render_analysis_chat(video_chat_container, st.session_state["video_messages"])
 
 with col2:
     if st.session_state["uploaded_file"] and st.session_state["file_type"] == "image":
@@ -126,18 +128,9 @@ with col2:
         st.video(st.session_state["uploaded_file"], format="video/mp4", start_time=0)
         if st.button("Play Video"):
             if not st.session_state["video_played"]:
-                # Determine focus_prompt
-                focus_prompt = ''
-                user_focus_response = ""
-                for msg in reversed(st.session_state["messages"]):
-                    if msg["role"] == "user":
-                        user_focus_response = msg["content"].strip()
-                        break
+                focus_prompt = ''  # The focus_prompt remains empty here as per previous logic
 
-                if user_focus_response.lower().startswith("yes"):
-                    focus_prompt = user_focus_response
-
-                # Save the uploaded video to a temp file
+                # Save the uploaded video to a temporary file
                 with tempfile.NamedTemporaryFile(delete=False, suffix="." + file_extension) as temp:
                     temp.write(st.session_state["uploaded_file"].read())
                     temp_path = temp.name
@@ -148,18 +141,21 @@ with col2:
                     focus_prompt=focus_prompt
                 )
 
-                # Append the entire result as one bot message
+                # Prepare response text for line-by-line animation
                 response_text = ""
                 for sec, explanation in explanations_map.items():
                     response_text += f"{sec} {explanation}\n"
                 response_text += f"Final summary: {final_res}\n"
 
                 st.session_state["video_played"] = True
-                st.session_state["video_messages"].append({"role": "bot", "content": response_text.strip()})
-                render_analysis_chat()
+                typing_animation(
+                    response_text.strip(),
+                    video_chat_container,
+                    st.session_state["video_messages"],
+                    delay=0.5
+                )
 
 # Place the Chat button at the bottom under all objects from the left
-# We do this after the columns have been declared
 st.divider()
 if st.button("Chat"):
     st.session_state["show_chat"] = not st.session_state["show_chat"]
@@ -179,9 +175,7 @@ if st.session_state["show_chat"]:
         with st.chat_message("user"):
             st.markdown(prompt)
 
-        # Use the older version logic with focus_prompt:
-        # If an image is uploaded, we analyze it with chatGPT logic.
-        # If a video is uploaded, return the old "not implemented" message.
+        # Handle image or video responses
         if st.session_state["uploaded_file"] and st.session_state["file_type"] == "image":
             image_base64 = encode_image_to_base(Image.open(st.session_state["uploaded_file"]))
             response = analyze_image_with_chatgpt(image_base64, prompt=prompt)
