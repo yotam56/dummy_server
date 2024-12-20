@@ -92,6 +92,7 @@ def typing_animation(full_text, chat_container, delay=1):
 
 # File uploader at the top (now supports videos)
 uploaded_file = st.file_uploader("Upload an Image or Video", type=["png", "jpg", "jpeg", "mp4", "mov"])
+st.markdown("<h2 style='text-align: left;'>Chat</h2>", unsafe_allow_html=True)
 
 # Determine file type if uploaded
 if uploaded_file:
@@ -129,7 +130,6 @@ with col2:
                 st.session_state["video_played"] = True
 
 with col1:
-    st.subheader("Chat")
     chat_container = st.empty()  # Single container for the chat display
 
     # If the video has been "played" and is a video, trigger the mock typing animation
