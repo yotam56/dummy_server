@@ -38,15 +38,20 @@ def frame_to_base64(frame):
     jpg_as_text = base64.b64encode(buffer).decode('utf-8')
     return jpg_as_text
 
-def analyze_image_with_chatgpt(image_base64, second, previous_explanations = "", summarize_promt = ""):
-    """
-    Send the image to ChatGPT for a detailed explanation.
-    Include the entire history of previous explanations in the prompt.
-    """
+def analyze_image_with_chatgpt(image_base64, second, previous_explanations = "", summarize_promt = "", focus_prompt = ""):
     # Build a prompt that includes all previous context
     if summarize_promt != "":
         prompt = summarize_promt
         # print(f'Summarize prompt: \n {prompt}')
+    elif focus_prompt != "":
+        prompt = (
+            f"Here is the narrative so far, up to second {second - 1}:\n"
+            f"{previous_explanations}\n\n"
+            f"Now at second {second}, analyze this new frame. Please provide a very detailed explanation "
+            f"of what is visible in this image, building on the previous context and maintaining continuity.\n"
+            f"Focus specifically on: {focus_prompt}.\n"
+            f"Each response should be no more than 15 words."
+        )
     else:
         prompt = (
             f"Here is the narrative so far, up to second {second - 1}:\n"
@@ -81,12 +86,6 @@ def analyze_image_with_chatgpt(image_base64, second, previous_explanations = "",
     return response.choices[0].message.content.strip()
 
 def summarize_entire_video(previous_explanations):
-    """
-    Creates a prompt that includes all previous frame-by-frame explanations and
-    asks the model to produce a unified, continuous narrative of the video as if
-    a viewer is watching it unfold in real-time, integrating all the past details
-    smoothly.
-    """
     prompt = (
         "Below are detailed, second-by-second explanations of a video:\n\n"
         f"{previous_explanations}\n\n"
@@ -99,9 +98,8 @@ def summarize_entire_video(previous_explanations):
     return prompt
 
 
-def main():
     # Hard-coded path to your local MP4 file
-    video_path = "/Users/nadavkurin/coding/VisionAEye/detector-server/WhatsApp Video 2024-12-15 at 19.06.52.mp4"
+def analyze_video(video_path = "/Users/nadavkurin/coding/VisionAEye/detector-server/WhatsApp Video 2024-12-15 at 19.06.52.mp4", focus_prompt=""):
 
     explanations = {}
     previous_explanations = ""  # Will hold a string of all previous explanations for context
@@ -109,26 +107,23 @@ def main():
 
     # Extract frames per second and analyze
     for sec, frame in get_video_frames_per_second(video_path):
-        # if frame_count > 5:
-        #     break
         image_b64 = frame_to_base64(frame)
 
         # Pass all previous explanations as context
-        explanation = analyze_image_with_chatgpt(image_b64, sec, previous_explanations = previous_explanations)
+        explanation = analyze_image_with_chatgpt(image_b64, sec, previous_explanations = previous_explanations, focus_prompt=focus_prompt)
 
-        print(f"Explanation for second {sec}:\n{explanation}\n")
-
-        # Store this explanation and append it to the running context
         explanations[sec] = explanation
         previous_explanations += f"Second {sec}: {explanation}\n\n"
 
         frame_count += 1
-    
+        
     final_res = analyze_image_with_chatgpt(image_b64, sec, previous_explanations = "", summarize_promt=summarize_entire_video(previous_explanations))
-    print(f'Final result: \n {final_res}')
-    # # Print the resulting dictionary
-    # for second, expl in explanations.items():
-    #     print(f"Second {second}:\n{expl}\n")
+
+    return explanations, final_res
 
 if __name__ == "__main__":
-    main()
+    explanations, final_res = analyze_video(focus_prompt = "Focus on the two persons")
+    for sec, explanation in explanations.items():
+        print(f'Second {sec}: \n {explanation} \n')
+    
+    print(f'Summary: {final_res}')
