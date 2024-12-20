@@ -46,15 +46,16 @@ def analyze_image_with_chatgpt(image_base64, second, previous_explanations = "",
     # Build a prompt that includes all previous context
     if summarize_promt != "":
         prompt = summarize_promt
-        print(f'Summarize prompt: \n {prompt}')
+        # print(f'Summarize prompt: \n {prompt}')
     else:
         prompt = (
             f"Here is the narrative so far, up to second {second - 1}:\n"
             f"{previous_explanations}\n\n"
             f"Now at second {second}, analyze this new frame. Please provide a very detailed explanation "
             f"of what is visible in this image, building on the previous context and maintaining continuity."
+            f"each response should be no more than 15 words."
         )
-        print(f'Prompt for second {second}: \n {prompt}')
+        # print(f'Prompt for second {second}: \n {prompt}')
 
     # Use a ChatCompletion endpoint for GPT-4 (adjust model as needed)
     response = openai.chat.completions.create(
