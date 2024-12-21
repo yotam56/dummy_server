@@ -80,7 +80,7 @@ if "messages" not in st.session_state:
     st.session_state["messages"] = [
         {
             "role": "assistant",
-            "content": "Hi! Is there anything specific you would like me to focus on? If so, could you please elaborate?",
+            "content": "Hi! How can I help you?",
         }
     ]
     st.session_state["waiting_for_response"] = True
@@ -162,6 +162,7 @@ with col2:
 
                 # Use mock_video_description to generate a response
                 mock_response = mock_video_description()
+                time.sleep(1)
 
                 # Display the mock response in the Visual Analysis Chat
                 typing_animation_line(
@@ -201,5 +202,11 @@ if st.session_state["show_chat"]:
 
         st.session_state["messages"].append({"role": "assistant", "content": mock_response})
         with st.chat_message("assistant"):
-            time.sleep(1)
-            st.markdown(mock_response)
+            formatted_response = mock_response.replace("\n", "<br>")  # Replace newlines with <br>
+            response_container = st.empty()  # Create an empty container for the response
+            current_text = ""  # Initialize the current text to display
+
+            for char in formatted_response:
+                current_text += char  # Add one character at a time
+                response_container.markdown(current_text, unsafe_allow_html=True)  # Render the updated text
+                time.sleep(0.02)  # Typing speed delay

@@ -1,29 +1,38 @@
 def mock_video_description():
     # This function returns a mock description of what might be happening in the video.
     return (
-        "00:00 The camera focuses on three men walking side by side on a busy sidewalk.\n"
-        "00:01 The man in white glances around nervously, while the other two appear calm.\n"
-        "00:02 The man in white suddenly quickens his pace, separating slightly from the others.\n"
-        "00:03 He reaches into his jacket and pulls out a concealed knife.\n"
-        "00:04 Without warning, he lunges toward a passerby, a middle-aged woman, and stabs her in the side.\n"
-        "00:05 Panicked screams erupt from the crowd. The other two men with him appear shocked and step back.\n"
-        "00:06 The man in white shouts incoherently and pushes forward, looking for another victim.\n"
-        "00:07 People scatter, trying to run away. He grabs a younger man’s shoulder, stabbing him once before the man breaks free.\n"
-        "00:08 The crowd is in chaos, some trying to help the injured, others desperately fleeing.\n"
-        "00:09 The attacker continues moving down the sidewalk, knife raised, searching for targets.\n"
-        "00:10 Police sirens begin to wail faintly in the background.\n"
-        "00:11 He spots another victim—a bystander frozen in fear—and slashes at their arm.\n"
-        "00:12 Blood stains the man in white’s shirt as he turns, disoriented by the panic around him.\n"
-        "00:13 One of the original two men shouts at him, seemingly trying to stop him, but keeps a distance.\n"
-        "00:14 The attacker stumbles, momentarily distracted by the sirens growing louder.\n"
-        "00:15 Police officers rush onto the scene, weapons drawn, shouting commands.\n"
-        "00:16 The man in white attempts to run, knife still in hand, pushing through fleeing pedestrians.\n"
-        "00:17 Just as he rounds a corner, the police close in, weapons raised, ready to confront him.\n"
+        "00:00 Security camera shows a white van approaching a soldier at a border checkpoint.\n"
+        "00:01 White van approaches soldier standing on the sidewalk at a border security checkpoint.\n"
+        "00:02 White van veers onto the sidewalk, nearing the soldier at the security checkpoint.\n"
+        "00:03 White van strikes soldier, throwing him onto the hood near the security checkpoint.\n"
+        "00:04 White van halts near a soldier, who is injured and attempting to recover.\n"
+        "00:05 Van driver exits vehicle, approaching injured soldier who is on the ground at checkpoint.\n"
+        "00:06 Attacker engages in physical confrontation with the injured soldier near the white van.\n"
+        "00:07 Attacker grapples with the soldier near the white van.\n"
+        "00:08 Attacker physically assaults the soldier, forcing him backward.\n"
+        "Final Summery: A white van at a border checkpoint suddenly veers onto the sidewalk, striking a soldier and throwing him to the ground. The driver exits the vehicle and physically assaults the injured soldier, forcing him backward. The violent confrontation unfolds rapidly near the van, capturing the alarming sequence on the security camera.\n"
     )
 
 def mock_chat_analyze():
     return [
-        "response1\n",
-        "response2\n",
-        "response3\n",
+        """ I’ve found instances of this vehicle with the same license plate 🚐.
+        For example, it was at the border on October 5, 2024, at 7:22 AM.""",
+
+        """This car appeared at the border gate three times in the past month.
+        ⚠️ On two occasions, it was parked near the border without crossing. 
+        The third instance is the video you provided, which is linked to the terror attack.
+        🚨 It seems the driver was gathering intelligence on the border patrol before committing the crime.""",
+
+        """Sure. Here are the links for the videos: 
+        - October 2, 2024, at 7:49 AM 
+        - October 5, 2024, at 7:22 AM 
+        - October 6, 2024, at 8:31 AM""",
+
+
     ]
+
+"""
+Could you check for this white van in the previous records?
+Please search all the border cameras for the appearance of this car and provide me with a summary of its movements.
+Can you provide me with links to each video so I can review them myself?
+"""
