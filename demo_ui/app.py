@@ -174,7 +174,6 @@ with col2:
                     st.session_state["video_messages"],
                     delay=0.5
                 )
-                add_follow_up_question()  # Add follow-up question after video analysis response
 
 # Place the Chat button at the bottom
 st.divider()
