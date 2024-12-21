@@ -20,3 +20,10 @@ def mock_video_description():
         "00:16 The man in white attempts to run, knife still in hand, pushing through fleeing pedestrians.\n"
         "00:17 Just as he rounds a corner, the police close in, weapons raised, ready to confront him.\n"
     )
+
+def mock_chat_analyze():
+    return [
+        "response1\n",
+        "response2\n",
+        "response3\n",
+    ]

@@ -1,11 +1,9 @@
 import streamlit as st
 import time
 from PIL import Image
-import tempfile
 
-from mock import mock_video_description  # Mock response for video analysis
+from mock import mock_video_description, mock_chat_analyze
 from gpt_connector import encode_image_to_base, analyze_image_with_chatgpt
-from video_anlyzer import analyze_video
 
 # Page Configuration
 st.set_page_config(page_title="VisionAeye Demo", layout="wide")
@@ -70,6 +68,10 @@ if "waiting_for_response" not in st.session_state:
     st.session_state["waiting_for_response"] = False
 if "focus_prompt" not in st.session_state:
     st.session_state["focus_prompt"] = ""
+if "mock_responses" not in st.session_state:
+    st.session_state["mock_responses"] = mock_chat_analyze()  # Mock responses for chat
+if "response_index" not in st.session_state:
+    st.session_state["response_index"] = 0
 
 if "show_chat" not in st.session_state:
     st.session_state["show_chat"] = False
@@ -84,7 +86,7 @@ if "messages" not in st.session_state:
     st.session_state["waiting_for_response"] = True
 
 # Typing animation function for line-by-line output
-def typing_animation(full_text, chat_container, message_list, delay=1.5):
+def typing_animation_line(full_text, chat_container, message_list, delay=1.5):
     """
     Prints the response line by line with a short delay.
     """
@@ -94,6 +96,12 @@ def typing_animation(full_text, chat_container, message_list, delay=1.5):
         render_analysis_chat(chat_container, message_list)
         time.sleep(delay)
 
+def typing_animation_char(message_index, text, chat_container, delay=0.05):
+    """Dynamically update the chat with a typing effect."""
+    for char in text:
+        st.session_state["messages"][message_index]["content"] += char
+        render_analysis_chat(chat_container, text)
+        time.sleep(delay)
 # Add follow-up question in the chat
 def add_follow_up_question():
     follow_up = "Is there anything else I can help you with?"
@@ -156,7 +164,7 @@ with col2:
                 mock_response = mock_video_description()
 
                 # Display the mock response in the Visual Analysis Chat
-                typing_animation(
+                typing_animation_line(
                     mock_response.strip(),
                     video_chat_container,
                     st.session_state["video_messages"],
@@ -184,55 +192,14 @@ if st.session_state["show_chat"]:
         with st.chat_message("user"):
             st.markdown(prompt)
 
-        # =========== Focus Prompt Logic for Video ===========
-        if st.session_state["file_type"] == "video":
-            # If we are still waiting for response (the user’s first message after the initial question):
-            if st.session_state["waiting_for_response"]:
-                # Check if user’s input starts with “yes”
-                if prompt.strip().lower().startswith("yes"):
-                    # Set the entire user message as focus prompt
-                    st.session_state["focus_prompt"] = prompt
-
-                # Respond with “Got it!” and no more waiting
-                got_it_response = "Got it!"
-                st.session_state["messages"].append({"role": "assistant", "content": got_it_response})
-                with st.chat_message("assistant"):
-                    st.markdown(got_it_response)
-
-                st.session_state["waiting_for_response"] = False
-
-            else:
-                # After the first user response, we do have a “focus_prompt” set or not,
-                # but we won't do further custom video analysis from the chat, for now.
-                fallback_response = (
-                    "Custom video analysis after initial focus is not yet implemented. "
-                    "But your prompt has been noted."
-                )
-                st.session_state["messages"].append({"role": "assistant", "content": fallback_response})
-                with st.chat_message("assistant"):
-                    st.markdown(fallback_response)
-                add_follow_up_question()  # Add follow-up question after fallback response
-
-        # =========== Image Prompt Logic ===========
-        elif st.session_state["file_type"] == "image":
-            # Analyze the uploaded image with the user prompt
-            image_base64 = encode_image_to_base(Image.open(st.session_state["uploaded_file"]))
-            response = analyze_image_with_chatgpt(image_base64, prompt=prompt)
-
-            # Show it in the left "Visual Analysis Chat" using typing_animation
-            typing_animation(
-                response.strip(),
-                video_chat_container,
-                st.session_state["video_messages"],
-                delay=0.5
-            )
-            add_follow_up_question()
-
-        # =========== No File or Other Type ===========
+        # Respond with the next mock response
+        if st.session_state["response_index"] < len(st.session_state["mock_responses"]):
+            mock_response = st.session_state["mock_responses"][st.session_state["response_index"]]
+            st.session_state["response_index"] += 1
         else:
-            # If there's no valid file uploaded, or it's not an image/video
-            no_file_response = "No valid file uploaded or recognized for analysis."
-            st.session_state["messages"].append({"role": "assistant", "content": no_file_response})
-            with st.chat_message("assistant"):
-                st.markdown(no_file_response)
-            add_follow_up_question()
+            mock_response = "No further responses available."
+
+        st.session_state["messages"].append({"role": "assistant", "content": mock_response})
+        with st.chat_message("assistant"):
+            time.sleep(1)
+            st.markdown(mock_response)
