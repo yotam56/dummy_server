@@ -3,6 +3,7 @@ import cv2
 import base64
 import openai
 
+# openai.api_key = os.getenv("OPENAI_API_KEY")
 
 def get_video_frames_per_second(video_path):
     """

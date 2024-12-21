@@ -3,7 +3,7 @@ import time
 from PIL import Image
 import tempfile
 
-from mock import mock_video_description
+from mock import mock_video_description  # Mock response for video analysis
 from gpt_connector import encode_image_to_base, analyze_image_with_chatgpt
 from video_anlyzer import analyze_video
 
@@ -84,7 +84,7 @@ if "messages" not in st.session_state:
     st.session_state["waiting_for_response"] = True
 
 # Typing animation function for line-by-line output
-def typing_animation(full_text, chat_container, message_list, delay=1):
+def typing_animation(full_text, chat_container, message_list, delay=1.5):
     """
     Prints the response line by line with a short delay.
     """
@@ -147,33 +147,22 @@ with col2:
         st.video(st.session_state["uploaded_file"], format="video/mp4", start_time=0)
         if st.button("Execute"):
             if not st.session_state["video_played"]:
-                # Use the focus_prompt we may have retrieved from user's chat
-                focus_prompt = st.session_state["focus_prompt"]
+                focus_prompt = st.session_state["focus_prompt"]  # Retrieve focus prompt (if any)
 
-                # Save the uploaded video to a temp file
-                with tempfile.NamedTemporaryFile(delete=False, suffix="." + file_extension) as temp:
-                    temp.write(st.session_state["uploaded_file"].read())
-                    temp_path = temp.name
+                # Simulate processing time
+                time.sleep(2)
 
-                # Analyze video with the focus prompt
-                explanations_map, final_res, previous_explanations_string = analyze_video(
-                    video_path=temp_path,
-                    focus_prompt=focus_prompt
-                )
+                # Use mock_video_description to generate a response
+                mock_response = mock_video_description()
 
-                # Prepare response text for line-by-line animation
-                response_text = ""
-                for sec, explanation in explanations_map.items():
-                    response_text += f"{sec} {explanation}\n"
-                response_text += f"Final summary: {final_res}\n"
-
-                st.session_state["video_played"] = True
+                # Display the mock response in the Visual Analysis Chat
                 typing_animation(
-                    response_text.strip(),
+                    mock_response.strip(),
                     video_chat_container,
                     st.session_state["video_messages"],
                     delay=0.5
                 )
+                st.session_state["video_played"] = True  # Set the video as "processed"
 
 # Place the Chat button at the bottom
 st.divider()
@@ -237,7 +226,7 @@ if st.session_state["show_chat"]:
                 st.session_state["video_messages"],
                 delay=0.5
             )
-            add_follow_up_question()  # Add follow-up question after image analysis response
+            add_follow_up_question()
 
         # =========== No File or Other Type ===========
         else:
@@ -246,4 +235,4 @@ if st.session_state["show_chat"]:
             st.session_state["messages"].append({"role": "assistant", "content": no_file_response})
             with st.chat_message("assistant"):
                 st.markdown(no_file_response)
-            add_follow_up_question()  # Add follow-up question after no file response
+            add_follow_up_question()
