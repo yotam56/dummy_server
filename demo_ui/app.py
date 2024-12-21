@@ -94,9 +94,11 @@ def typing_animation(full_text, chat_container, message_list, delay=1):
         render_analysis_chat(chat_container, message_list)
         time.sleep(delay)
 
-# -- File Uploader --
+# File uploader (supports images and videos)
 uploaded_file = st.file_uploader("Upload an Image or Video", type=["png", "jpg", "jpeg", "mp4", "mov"])
-st.markdown("<h2 style='text-align: left;'>Video Analysis Chat</h2>", unsafe_allow_html=True)
+
+# Change the title from "Video Analysis Chat" to "Visual Analysis Chat"
+st.markdown("<h2 style='text-align: left;'>Visual Analysis Chat</h2>", unsafe_allow_html=True)
 
 if uploaded_file:
     file_extension = uploaded_file.name.split('.')[-1].lower()
@@ -107,13 +109,13 @@ if uploaded_file:
         st.session_state["file_type"] = "video"
         st.session_state["uploaded_file"] = uploaded_file
 
-# -- Layout --
+# Layout
 col1, col2 = st.columns([2, 1])
 
-# Left column: Video analysis chat display only
+# Left column: Analysis chat display only
 with col1:
     def render_analysis_chat(container, messages):
-        """Renders the video analysis chat messages."""
+        """Renders the analysis chat messages."""
         chat_html = "<div class='chat-container'>"
         for message in messages:
             if message["role"] == "user":
@@ -166,12 +168,12 @@ with col2:
                     delay=0.5
                 )
 
-# -- Chat toggle button at the bottom --
+# Place the Chat button at the bottom
 st.divider()
 if st.button("Chat"):
     st.session_state["show_chat"] = not st.session_state["show_chat"]
 
-# -- If the chat modal is open, display the provided chat interface --
+# If the chat modal is open, display the provided chat interface
 if st.session_state["show_chat"]:
     st.markdown("### Chat")
     # Display chat messages
@@ -216,12 +218,18 @@ if st.session_state["show_chat"]:
 
         # =========== Image Prompt Logic ===========
         elif st.session_state["file_type"] == "image":
-            # If user has uploaded an image, we do normal analysis with ChatGPT
+            # 1) Analyze the uploaded image with the user prompt
             image_base64 = encode_image_to_base(Image.open(st.session_state["uploaded_file"]))
             response = analyze_image_with_chatgpt(image_base64, prompt=prompt)
-            st.session_state["messages"].append({"role": "assistant", "content": response})
-            with st.chat_message("assistant"):
-                st.markdown(response)
+
+            # 2) Instead of putting the result in the chat on the right,
+            #    we show it in the left "Visual Analysis Chat" using typing_animation
+            typing_animation(
+                response.strip(),
+                video_chat_container,
+                st.session_state["video_messages"],
+                delay=0.5
+            )
 
         # =========== No File or Other Type ===========
         else:
