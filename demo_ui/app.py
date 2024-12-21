@@ -94,6 +94,13 @@ def typing_animation(full_text, chat_container, message_list, delay=1):
         render_analysis_chat(chat_container, message_list)
         time.sleep(delay)
 
+# Add follow-up question in the chat
+def add_follow_up_question():
+    follow_up = "Is there anything else I can help you with?"
+    st.session_state["messages"].append({"role": "assistant", "content": follow_up})
+    with st.chat_message("assistant"):
+        st.markdown(follow_up)
+
 # File uploader (supports images and videos)
 uploaded_file = st.file_uploader("Upload an Image or Video", type=["png", "jpg", "jpeg", "mp4", "mov"])
 
@@ -167,6 +174,7 @@ with col2:
                     st.session_state["video_messages"],
                     delay=0.5
                 )
+                add_follow_up_question()  # Add follow-up question after video analysis response
 
 # Place the Chat button at the bottom
 st.divider()
@@ -215,21 +223,22 @@ if st.session_state["show_chat"]:
                 st.session_state["messages"].append({"role": "assistant", "content": fallback_response})
                 with st.chat_message("assistant"):
                     st.markdown(fallback_response)
+                add_follow_up_question()  # Add follow-up question after fallback response
 
         # =========== Image Prompt Logic ===========
         elif st.session_state["file_type"] == "image":
-            # 1) Analyze the uploaded image with the user prompt
+            # Analyze the uploaded image with the user prompt
             image_base64 = encode_image_to_base(Image.open(st.session_state["uploaded_file"]))
             response = analyze_image_with_chatgpt(image_base64, prompt=prompt)
 
-            # 2) Instead of putting the result in the chat on the right,
-            #    we show it in the left "Visual Analysis Chat" using typing_animation
+            # Show it in the left "Visual Analysis Chat" using typing_animation
             typing_animation(
                 response.strip(),
                 video_chat_container,
                 st.session_state["video_messages"],
                 delay=0.5
             )
+            add_follow_up_question()  # Add follow-up question after image analysis response
 
         # =========== No File or Other Type ===========
         else:
@@ -238,3 +247,4 @@ if st.session_state["show_chat"]:
             st.session_state["messages"].append({"role": "assistant", "content": no_file_response})
             with st.chat_message("assistant"):
                 st.markdown(no_file_response)
+            add_follow_up_question()  # Add follow-up question after no file response
