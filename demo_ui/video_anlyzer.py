@@ -28,6 +28,7 @@ def get_video_frames_per_second(video_path):
 
     cap.release()
 
+
 def frame_to_base64(frame):
     """
     Convert a frame (numpy array) to a base64-encoded JPEG.
@@ -38,12 +39,9 @@ def frame_to_base64(frame):
     jpg_as_text = base64.b64encode(buffer).decode('utf-8')
     return jpg_as_text
 
-def analyze_image_with_chatgpt(image_base64, second, previous_explanations = "", summarize_promt = "", focus_prompt = ""):
-    # Build a prompt that includes all previous context
-    if summarize_promt != "":
-        prompt = summarize_promt
-        # print(f'Summarize prompt: \n {prompt}')
-    elif focus_prompt != "":
+
+def analyze_image_with_chatgpt(image_base64, second, previous_explanations="", focus_prompt=""):
+    if focus_prompt != "":
         prompt = (
             f"Here is the narrative so far, up to second {second - 1}:\n"
             f"{previous_explanations}\n\n"
@@ -64,24 +62,24 @@ def analyze_image_with_chatgpt(image_base64, second, previous_explanations = "",
 
     # Use a ChatCompletion endpoint for GPT-4 (adjust model as needed)
     response = openai.chat.completions.create(
-    model="gpt-4o",
-    messages=[
-        {
-        "role": "user",
-        "content": [
+        model="gpt-4o",
+        messages=[
             {
-            "type": "text",
-            "text": prompt,
-            },
-            {
-            "type": "image_url",
-            "image_url": {
-                "url":  f"data:image/jpeg;base64,{image_base64}"
-            },
-            },
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": prompt,
+                    },
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:image/jpeg;base64,{image_base64}"
+                        },
+                    },
+                ],
+            }
         ],
-        }
-    ],
     )
     return response.choices[0].message.content.strip()
 
@@ -90,7 +88,8 @@ def summarize_request(prompt):
     response = openai.chat.completions.create(
         model="gpt-4o",
         messages=[
-            {"role": "system", "content": "Your task is to generate a summary of a video based on a prior second-by-second analysis."},
+            {"role": "system",
+             "content": "Your task is to generate a summary of a video based on a prior second-by-second analysis."},
             {
                 "role": "user",
                 "content": prompt
@@ -99,19 +98,18 @@ def summarize_request(prompt):
     )
     return response.choices[0].message.content.strip()
 
-def general_request(prompt, content):
+
+def general_request(prompt, content=None):
+    messages = []
+    if content:
+        messages.append({"role": "system", "content": content})
+    messages.append({"role": "user", "content": prompt})
+
     response = openai.chat.completions.create(
         model="gpt-4o",
-        messages=[
-            {"role": "system", "content": content},
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ]
+        messages=messages
     )
     return response.choices[0].message.content.strip()
-
 
 
 def summarize_entire_video_prompt(previous_explanations):
@@ -126,33 +124,42 @@ def summarize_entire_video_prompt(previous_explanations):
     )
     return prompt
 
-
     # Hard-coded path to your local MP4 file
-def analyze_video(video_path = "/Users/nadavkurin/coding/VisionAEye/detector-server/WhatsApp Video 2024-12-15 at 19.06.52.mp4", focus_prompt=""):
 
+
+def analyze_video(video_path="videos/pigua.mp4", focus_prompt=""):
     explanations_map = {}
     previous_explanations_string = ""  # Will hold a string of all previous explanations for context
     frame_count = 0
 
     # Extract frames per second and analyze
     for sec, frame in get_video_frames_per_second(video_path):
+        # Format sec as MM:SS
+        minutes, seconds = divmod(sec, 60)
+        formatted_sec = f"{minutes:02}:{seconds:02}"
+
         image_b64 = frame_to_base64(frame)
 
         # Pass all previous explanations as context
-        explanation = analyze_image_with_chatgpt(image_b64, sec, previous_explanations = previous_explanations_string, focus_prompt=focus_prompt)
+        explanation = analyze_image_with_chatgpt(
+            image_b64, sec,
+            previous_explanations=previous_explanations_string,
+            focus_prompt=focus_prompt
+        )
 
-        explanations_map[sec] = explanation
-        previous_explanations_string += f"Second {sec}: {explanation}.\n\n"
+        explanations_map[formatted_sec] = explanation
+        previous_explanations_string += f"Second {formatted_sec}: {explanation}.\n\n"
 
         frame_count += 1
-        
+
     final_res = summarize_request(prompt=summarize_entire_video_prompt(previous_explanations_string))
 
     return explanations_map, final_res, previous_explanations_string
+
 
 if __name__ == "__main__":
     explanations, final_res, _ = analyze_video()
     for sec, explanation in explanations.items():
         print(f'Second {sec}: \n {explanation} \n')
-    
+
     print(f'Summary: {final_res}')
